@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using PEUtils;
 using System.Collections.Concurrent;
-using UnityEditor.PackageManager.UI;
+using System.Collections.Generic;
 
 public class GameRoot : MonoBehaviour
 {
@@ -21,7 +21,10 @@ public class GameRoot : MonoBehaviour
     AsyncNet<ClientSession, Package> client = new AsyncNet<ClientSession, Package>();
     ConcurrentQueue<Package> packageQueue = new ConcurrentQueue<Package>(); // 消息队列
 
+    Dictionary<uint, GameObject> playerDic = null; // 玩家字典(实体ID, 玩家对象)
+
     uint currentEntityID; // 当前实体ID
+    GameObject currentPlayerGo; // 当前玩家对象
 
     void Start()
     {
@@ -36,6 +39,8 @@ public class GameRoot : MonoBehaviour
         PELog.InitSettings(config);
 
         client.StartAsClient("127.0.0.1", 18000);
+
+        playerDic = new Dictionary<uint, GameObject>();
     }
 
     void Update()
@@ -48,6 +53,9 @@ public class GameRoot : MonoBehaviour
                 {
                     case CMD.LoginResponse:
                         HandleLoginResponse(pkg.loginResponse);
+                        break;
+                    case CMD.NtfAOIMsg:
+                        HandleNtfAOIMsg(pkg.ntfAOIMsg);
                         break;
                     default:
                         break;
@@ -67,6 +75,76 @@ public class GameRoot : MonoBehaviour
     {
         entityIDTxt.text = $"EntityID: {response.entityID}";
         currentEntityID = response.entityID;
+    }
+
+    /// <summary>
+    /// 处理AOI消息
+    /// </summary>
+    void HandleNtfAOIMsg(NtfAOIMsg aoiMsg)
+    {
+        // 处理退出消息
+        if (aoiMsg.exitLst != null)
+        {
+            for (int i = 0; i < aoiMsg.exitLst.Count; i++)
+            {
+                ExitMsg exitMsg = aoiMsg.exitLst[i];
+                if (playerDic.TryGetValue(exitMsg.entityID, out GameObject player))
+                {
+                    Destroy(player);
+                }
+            }
+        }
+
+        // 处理进入消息
+        if (aoiMsg.enterLst != null)
+        {
+            for (int i = 0; i < aoiMsg.enterLst.Count; i++)
+            {
+                EnterMsg enterMsg = aoiMsg.enterLst[i];
+                if (!playerDic.ContainsKey(enterMsg.entityID))
+                {
+                    GameObject go = CommonTool.LoadItem(ItemEnum.EntityItem, enterMsg.entityID.ToString());
+                    go.name = $"Entity: {enterMsg.entityID}";
+                    go.transform.SetParent(entityRoot);
+
+                    if (enterMsg.entityID == currentEntityID)
+                    {
+                        currentPlayerGo = go;
+                        CommonTool.SetMaterialColor(currentPlayerGo, MaterialEnum.red);
+
+                        if (CamFollow)
+                        {
+                            cam.transform.SetParent(currentPlayerGo.transform);
+                            cam.transform.position = new Vector3(0, 40, 0);
+                        }
+                    }
+
+                    go.transform.position = new Vector3(enterMsg.PosX, 0, enterMsg.PosZ);
+                    if (!playerDic.ContainsKey(enterMsg.entityID))
+                    {
+                        playerDic.Add(enterMsg.entityID, go);
+                    }
+                }
+            }
+        }
+
+        // 处理移动消息
+        if (aoiMsg.moveLst != null)
+        {
+            for (int i = 0; i < aoiMsg.moveLst.Count; i++)
+            {
+                MoveMsg mm = aoiMsg.moveLst[i];
+                if (mm.entityID != currentEntityID)
+                {
+                    GameObject player;
+                    if (playerDic.TryGetValue(mm.entityID, out player))
+                    {
+                        // 同步其他玩家的位置
+                        player.transform.position = new Vector3(mm.PosX, 0, mm.PosZ);
+                    }
+                }
+            }
+        }
     }
 
     public void AddMsgPackage(Package package)
