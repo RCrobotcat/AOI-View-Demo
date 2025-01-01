@@ -26,6 +26,8 @@ public class GameRoot : MonoBehaviour
     uint currentEntityID; // 当前实体ID
     GameObject currentPlayerGo; // 当前玩家对象
 
+    float horizontal, vertical;
+
     void Start()
     {
         Instance = this;
@@ -43,6 +45,32 @@ public class GameRoot : MonoBehaviour
         playerDic = new Dictionary<uint, GameObject>();
     }
 
+    void FixedUpdate()
+    {
+        horizontal = Input.GetAxis("Horizontal");
+        vertical = Input.GetAxis("Vertical");
+
+        Vector3 direction = new Vector3(horizontal, 0, vertical);
+
+        if (direction != Vector3.zero)
+        {
+            if (currentEntityID != 0 && currentPlayerGo != null)
+            {
+                currentPlayerGo.transform.position += direction.normalized * RegularConfigs.moveSpeed * Time.fixedDeltaTime;
+                Package pkg = new Package
+                {
+                    cmd = CMD.SendMovePos,
+                    sendMovePos = new SendMovePos
+                    {
+                        entityID = currentEntityID,
+                        PosX = currentPlayerGo.transform.position.x,
+                        PosZ = currentPlayerGo.transform.position.z
+                    }
+                };
+                client.session.SendMsg(pkg);
+            }
+        }
+    }
     void Update()
     {
         while (!packageQueue.IsEmpty)
