@@ -22,6 +22,21 @@ public static class CommonTool
         Material material = Resources.Load<Material>("Mat/" + materialEnum.ToString());
         mr.material = material;
     }
+
+    public static int index;
+    /// <summary>
+    /// 设置Cell的颜色
+    /// </summary>
+    public static void SetCellColor(GameObject gameObject)
+    {
+        index++;
+        if (index >= 9)
+            index = 1;
+
+        MeshRenderer meshRenderer = gameObject.GetComponent<MeshRenderer>();
+        Material material = Resources.Load<Material>("Mat/CellMats/Cell" + (index % 10).ToString());
+        meshRenderer.material = material;
+    }
 }
 
 public enum ItemEnum

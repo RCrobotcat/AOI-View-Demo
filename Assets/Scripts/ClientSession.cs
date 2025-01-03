@@ -16,7 +16,7 @@ public class ClientSession : AsyncSession<Package>
     protected override void OnReceiveMsg(Package msg)
     {
         GameRoot.Instance.AddMsgPackage(msg);
-        this.LogGreen($"Received message from server: {msg}.");
+        // this.LogGreen($"Received message from server: {msg}.");
     }
 }
 

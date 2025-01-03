@@ -85,6 +85,9 @@ public class GameRoot : MonoBehaviour
                     case CMD.NtfAOIMsg:
                         HandleNtfAOIMsg(pkg.ntfAOIMsg);
                         break;
+                    case CMD.NtfCell:
+                        HandleCreateCell(pkg.ntfCell);
+                        break;
                     default:
                         break;
                 }
@@ -104,7 +107,6 @@ public class GameRoot : MonoBehaviour
         entityIDTxt.text = $"EntityID: {response.entityID}";
         currentEntityID = response.entityID;
     }
-
     /// <summary>
     /// 处理AOI消息
     /// </summary>
@@ -118,7 +120,10 @@ public class GameRoot : MonoBehaviour
                 ExitMsg exitMsg = aoiMsg.exitLst[i];
                 if (playerDic.TryGetValue(exitMsg.entityID, out GameObject player))
                 {
-                    Destroy(player);
+                    if (playerDic.Remove(exitMsg.entityID))
+                        Destroy(player);
+                    else
+                        this.Error($"Failed to remove player from playerDic with entityID: {exitMsg.entityID}.");
                 }
             }
         }
@@ -173,6 +178,18 @@ public class GameRoot : MonoBehaviour
                 }
             }
         }
+    }
+    /// <summary>
+    /// 处理创建Cell
+    /// </summary>
+    void HandleCreateCell(NtfCell ntfCell)
+    {
+        GameObject go = CommonTool.LoadItem(ItemEnum.CellItem, $"{ntfCell.xIndex.ToString()}_{ntfCell.zIndex.ToString()}");
+        go.transform.SetParent(cellRoot);
+        go.transform.localPosition = new Vector3(ntfCell.xIndex * RegularConfigs.aoiSize + RegularConfigs.aoiSize / 2, 0,
+            ntfCell.zIndex * RegularConfigs.aoiSize + RegularConfigs.aoiSize / 2);
+        go.transform.localScale = new Vector3(RegularConfigs.aoiSize * 0.99f, 1, RegularConfigs.aoiSize * 0.99f);
+        CommonTool.SetCellColor(go);
     }
 
     public void AddMsgPackage(Package package)
