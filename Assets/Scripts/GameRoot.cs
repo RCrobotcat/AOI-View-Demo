@@ -213,4 +213,18 @@ public class GameRoot : MonoBehaviour
 
         loginBtn.interactable = false;
     }
+
+    private void OnApplicationQuit()
+    {
+        client.session.SendMsg(new Package
+        {
+            cmd = CMD.SendExitStage,
+            sendExit = new SendExit
+            {
+                entityID = currentEntityID
+            }
+        });
+
+        client.CloseClient();
+    }
 }
