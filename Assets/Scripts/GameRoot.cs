@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using PEUtils;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System;
 
 public class GameRoot : MonoBehaviour
 {
@@ -70,7 +71,18 @@ public class GameRoot : MonoBehaviour
                 client.session.SendMsg(pkg);
             }
         }
+
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            testRandomDir = !testRandomDir;
+        }
+
+        if (testRandomDir)
+        {
+            RandomClientEntityDirTest();
+        }
     }
+
     void Update()
     {
         while (!packageQueue.IsEmpty)
@@ -212,6 +224,42 @@ public class GameRoot : MonoBehaviour
         });
 
         loginBtn.interactable = false;
+    }
+
+    bool testRandomDir = false;
+    DateTime lastTickTime = DateTime.Now;
+    Vector3 dir = Vector3.forward;
+    /// <summary>
+    /// Ëæ»úÒÆ¶¯²âÊÔ
+    /// </summary>
+    void RandomClientEntityDirTest()
+    {
+        if (DateTime.Now > lastTickTime.AddSeconds(RegularConfigs.randomChangeDirInterval))
+        {
+            lastTickTime = DateTime.Now;
+            dir = UnityEngine.Random.insideUnitSphere;
+            dir.y = 0;
+        }
+
+        if (currentEntityID != 0 && currentPlayerGo != null)
+        {
+            if (dir != Vector3.zero)
+            {
+                currentPlayerGo.transform.position += dir * RegularConfigs.moveSpeed * Time.fixedDeltaTime;
+
+                Package pkg = new Package
+                {
+                    cmd = CMD.SendMovePos,
+                    sendMovePos = new SendMovePos
+                    {
+                        entityID = currentEntityID,
+                        PosX = currentPlayerGo.transform.position.x,
+                        PosZ = currentPlayerGo.transform.position.z
+                    }
+                };
+                client.session.SendMsg(pkg);
+            }
+        }
     }
 
     private void OnApplicationQuit()
